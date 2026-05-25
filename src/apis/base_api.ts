@@ -10,7 +10,7 @@ export interface BaseBooksApiImpl {
 }
 
 export function factoryServiceProvider(settings: BookSearchPluginSettings): BaseBooksApiImpl {
-  const ndl = new NdlBooksApi(20);
+  const ndl = new NdlBooksApi(60);
   const google = new GoogleBooksApi(
     settings.localePreference,
     false, // edgeCurl は使わない

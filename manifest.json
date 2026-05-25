@@ -1,6 +1,6 @@
 {
-	"id": "book-purch",
-	"name": "Book Search",
+	"id": "book-perch",
+	"name": "Book Perch",
 	"version": "0.7.5",
 	"minAppVersion": "0.15.0",
 	"description": "Helps you find books and create notes.",
