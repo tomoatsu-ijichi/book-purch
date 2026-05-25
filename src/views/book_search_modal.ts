@@ -1,9 +1,6 @@
 import { BaseBooksApiImpl, factoryServiceProvider } from '@apis/base_api';
 import { Book } from '@models/book.model';
-import { DEFAULT_SETTINGS } from '@settings/settings';
-import { ServiceProvider } from '@src/constants';
 import BookSearchPlugin from '@src/main';
-import languages from '@utils/languages';
 import { ButtonComponent, Modal, Notice, Setting, TextComponent } from 'obsidian';
 
 export class BookSearchModal extends Modal {
@@ -12,7 +9,7 @@ export class BookSearchModal extends Modal {
   private isBusy = false;
   private okBtnRef?: ButtonComponent;
   private serviceProvider: BaseBooksApiImpl;
-  private options: { locale: string };
+  private options: Record<string, string>;
 
   constructor(
     private plugin: BookSearchPlugin,
@@ -49,8 +46,6 @@ export class BookSearchModal extends Modal {
   onOpen(): void {
     const { contentEl } = this;
     contentEl.createEl('h2', { text: 'Search Book' });
-    if (this.plugin.settings.serviceProvider === ServiceProvider.google && this.plugin.settings.askForLocale)
-      this.renderSelectLocale();
     contentEl.createDiv({ cls: 'book-search-plugin__search-modal--input' }, el => {
       new TextComponent(el)
         .setValue(this.query)
@@ -63,20 +58,6 @@ export class BookSearchModal extends Modal {
         .setButtonText(this.SEARCH_BUTTON_TEXT)
         .setCta()
         .onClick(() => this.searchBook());
-    });
-  }
-
-  renderSelectLocale() {
-    const defaultLocale = window.moment.locale();
-    new Setting(this.contentEl).setName('Locale').addDropdown(dropdown => {
-      dropdown.addOption(defaultLocale, `${languages[defaultLocale] || defaultLocale}`);
-      window.moment.locales().forEach(locale => {
-        const localeName = languages[locale];
-        if (localeName && locale !== defaultLocale) dropdown.addOption(locale, localeName);
-      });
-      dropdown
-        .setValue(this.options.locale === DEFAULT_SETTINGS.localePreference ? defaultLocale : this.options.locale)
-        .onChange(locale => (this.options.locale = locale));
     });
   }
 

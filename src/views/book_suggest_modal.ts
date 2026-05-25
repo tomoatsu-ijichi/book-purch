@@ -2,19 +2,14 @@ import { App, SuggestModal } from 'obsidian';
 import { Book } from '@models/book.model';
 
 export class BookSuggestModal extends SuggestModal<Book> {
-  showCoverImageInSearch: boolean;
-
   constructor(
     app: App,
-    showCoverImageInSearch: boolean,
     private readonly suggestion: Book[],
     private onChoose: (error: Error | null, result?: Book) => void,
   ) {
     super(app);
-    this.showCoverImageInSearch = showCoverImageInSearch;
   }
 
-  // Returns all available suggestions.
   getSuggestions(query: string): Book[] {
     return this.suggestion.filter(book => {
       const searchQuery = query?.toLowerCase();
@@ -26,21 +21,8 @@ export class BookSuggestModal extends SuggestModal<Book> {
     });
   }
 
-  // Renders each suggestion item.
   renderSuggestion(book: Book, el: HTMLElement) {
     el.addClass('book-suggestion-item');
-
-    const coverImageUrl = book.coverLargeUrl || book.coverMediumUrl || book.coverSmallUrl || book.coverUrl;
-
-    if (this.showCoverImageInSearch && coverImageUrl) {
-      el.createEl('img', {
-        cls: 'book-cover-image',
-        attr: {
-          src: coverImageUrl,
-          alt: `Cover Image for ${book.title}`,
-        },
-      });
-    }
 
     const textContainer = el.createEl('div', { cls: 'book-text-info' });
     textContainer.createEl('div', { text: book.title });
@@ -52,7 +34,6 @@ export class BookSuggestModal extends SuggestModal<Book> {
     textContainer.createEl('small', { text: subtitle });
   }
 
-  // Perform action on the selected suggestion.
   onChooseSuggestion(book: Book) {
     this.onChoose(null, book);
   }

@@ -1,9 +1,7 @@
 import { replaceDateInString } from '@utils/utils';
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 
-import { ServiceProvider } from '@src/constants';
 import languages from '@utils/languages';
-import { SettingServiceProviderModal } from '@views/setting_service_provider_modal';
 import BookSearchPlugin from '../main';
 import { FileNameFormatSuggest } from './suggesters/FileNameFormatSuggester';
 import { FileSuggest } from './suggesters/FileSuggester';
@@ -17,24 +15,16 @@ export enum DefaultFrontmatterKeyType {
 }
 
 export interface BookSearchPluginSettings {
-  folder: string; // new file location
-  fileNameFormat: string; // new file name format
-  frontmatter: string; // frontmatter that is inserted into the file
-  content: string; // what is automatically written to the file.
+  folder: string;
+  fileNameFormat: string;
+  frontmatter: string;
+  content: string;
   useDefaultFrontmatter: boolean;
   defaultFrontmatterKeyType: DefaultFrontmatterKeyType;
   templateFile: string;
-  serviceProvider: ServiceProvider;
-  naverClientId: string;
-  naverClientSecret: string;
   localePreference: string;
   apiKey: string;
   openPageOnCompletion: boolean;
-  showCoverImageInSearch: boolean;
-  enableCoverImageSave: boolean;
-  enableCoverImageEdgeCurl: boolean;
-  coverImagePath: string;
-  askForLocale: boolean;
 }
 
 export const DEFAULT_SETTINGS: BookSearchPluginSettings = {
@@ -45,17 +35,9 @@ export const DEFAULT_SETTINGS: BookSearchPluginSettings = {
   useDefaultFrontmatter: true,
   defaultFrontmatterKeyType: DefaultFrontmatterKeyType.camelCase,
   templateFile: '',
-  serviceProvider: ServiceProvider.google,
-  naverClientId: '',
-  naverClientSecret: '',
   localePreference: 'default',
   apiKey: '',
   openPageOnCompletion: true,
-  showCoverImageInSearch: false,
-  enableCoverImageSave: false,
-  enableCoverImageEdgeCurl: true,
-  coverImagePath: '',
-  askForLocale: true,
 };
 
 export class BookSearchSettingTab extends PluginSettingTab {
@@ -66,19 +48,19 @@ export class BookSearchSettingTab extends PluginSettingTab {
     super(app, plugin);
   }
 
-  private createGeneralSettings(containerEl) {
-    this.createHeader('General Settings', containerEl);
-    this.createFileLocationSetting(containerEl);
-    this.createFileNameFormatSetting(containerEl);
-  }
-
-  private createHeader(title, containerEl) {
+  private createHeader(title: string, containerEl: HTMLElement) {
     const header = document.createDocumentFragment();
     header.createEl('h2', { text: title });
     return new Setting(containerEl).setHeading().setName(header);
   }
 
-  private createFileLocationSetting(containerEl) {
+  private createGeneralSettings(containerEl: HTMLElement) {
+    this.createHeader('General Settings', containerEl);
+    this.createFileLocationSetting(containerEl);
+    this.createFileNameFormatSetting(containerEl);
+  }
+
+  private createFileLocationSetting(containerEl: HTMLElement) {
     new Setting(containerEl)
       .setName('New file location')
       .setDesc('New book notes will be placed here.')
@@ -86,7 +68,7 @@ export class BookSearchSettingTab extends PluginSettingTab {
         try {
           new FolderSuggest(this.app, cb.inputEl);
         } catch (e) {
-          console.error(e); // Improved error handling
+          console.error(e);
         }
         cb.setPlaceholder('Example: folder1/folder2')
           .setValue(this.plugin.settings.folder)
@@ -97,7 +79,7 @@ export class BookSearchSettingTab extends PluginSettingTab {
       });
   }
 
-  private createFileNameFormatSetting(containerEl) {
+  private createFileNameFormatSetting(containerEl: HTMLElement) {
     const newFileNameHint = document.createDocumentFragment().createEl('code', {
       text: replaceDateInString(this.plugin.settings.fileNameFormat) || '{{title}} - {{author}}',
     });
@@ -109,14 +91,13 @@ export class BookSearchSettingTab extends PluginSettingTab {
         try {
           new FileNameFormatSuggest(this.app, cb.inputEl);
         } catch (e) {
-          console.error(e); // Improved error handling
+          console.error(e);
         }
         cb.setPlaceholder('Example: {{title}} - {{author}}')
           .setValue(this.plugin.settings.fileNameFormat)
           .onChange(newValue => {
             this.plugin.settings.fileNameFormat = newValue?.trim();
             this.plugin.saveSettings();
-
             newFileNameHint.innerHTML = replaceDateInString(newValue) || '{{title}} - {{author}}';
           });
       });
@@ -157,83 +138,18 @@ export class BookSearchSettingTab extends PluginSettingTab {
     containerEl.empty();
     containerEl.classList.add('book-search-plugin__settings');
 
+    // General Settings (folder, file name format)
     this.createGeneralSettings(containerEl);
+
+    // Template file
     this.createTemplateFileSetting(containerEl);
 
-    // Service Provider
-    let serviceProviderExtraSettingButton: HTMLElement;
-    // eslint-disable-next-line prefer-const
-    let preferredLocaleDropdownSetting: Setting;
-    // eslint-disable-next-line prefer-const
-    let coverImageEdgeCurlToggleSetting: Setting;
-    const hideServiceProviderExtraSettingButton = () => {
-      serviceProviderExtraSettingButton.addClass('book-search-plugin__hide');
-    };
-    const showServiceProviderExtraSettingButton = () => {
-      serviceProviderExtraSettingButton.removeClass('book-search-plugin__hide');
-    };
-    const hideServiceProviderExtraSettingDropdown = () => {
-      if (preferredLocaleDropdownSetting !== undefined) {
-        preferredLocaleDropdownSetting.settingEl.addClass('book-search-plugin__hide');
-      }
-    };
-    const showServiceProviderExtraSettingDropdown = () => {
-      if (preferredLocaleDropdownSetting !== undefined) {
-        preferredLocaleDropdownSetting.settingEl.removeClass('book-search-plugin__hide');
-      }
-    };
-    const hideCoverImageEdgeCurlToggle = () => {
-      if (coverImageEdgeCurlToggleSetting !== undefined) {
-        coverImageEdgeCurlToggleSetting.settingEl.addClass('book-search-plugin__hide');
-      }
-    };
-    const showCoverImageEdgeCurlToggle = () => {
-      if (coverImageEdgeCurlToggleSetting !== undefined) {
-        coverImageEdgeCurlToggleSetting.settingEl.removeClass('book-search-plugin__hide');
-      }
-    };
-
-    const toggleServiceProviderExtraSettings = (
-      serviceProvider: ServiceProvider = this.plugin.settings?.serviceProvider,
-    ) => {
-      if (serviceProvider === ServiceProvider.naver) {
-        showServiceProviderExtraSettingButton();
-        hideServiceProviderExtraSettingDropdown();
-        hideCoverImageEdgeCurlToggle();
-      } else {
-        hideServiceProviderExtraSettingButton();
-        showServiceProviderExtraSettingDropdown();
-        showCoverImageEdgeCurlToggle();
-      }
-    };
+    // Preferred locale (Google Books の検索 locale)
+    const defaultLocale = window.moment.locale();
     new Setting(containerEl)
-      .setName('Service Provider')
-      .setDesc('Choose the service provider you want to use to search your books.')
-      .setClass('book-search-plugin__settings--service_provider')
-      .addDropdown(dropDown => {
-        dropDown.addOption(ServiceProvider.google, `${ServiceProvider.google} (Global)`);
-        dropDown.addOption(ServiceProvider.naver, `${ServiceProvider.naver} (Korean)`);
-        dropDown.setValue(this.plugin.settings?.serviceProvider ?? ServiceProvider.google);
-        dropDown.onChange(async value => {
-          const newValue = value as ServiceProvider;
-          toggleServiceProviderExtraSettings(newValue);
-          this.plugin.settings['serviceProvider'] = newValue;
-          await this.plugin.saveSettings();
-        });
-      })
-      .addExtraButton(component => {
-        serviceProviderExtraSettingButton = component.extraSettingsEl;
-        toggleServiceProviderExtraSettings();
-        component.onClick(() => {
-          new SettingServiceProviderModal(this.plugin).open();
-        });
-      });
-
-    preferredLocaleDropdownSetting = new Setting(containerEl)
       .setName('Preferred locale')
-      .setDesc('Sets the preferred locale to use when searching for books.')
+      .setDesc('Sets the preferred locale to use when searching for books via Google Books.')
       .addDropdown(dropDown => {
-        const defaultLocale = window.moment.locale();
         dropDown.addOption(defaultLocale, `${languages[defaultLocale] || defaultLocale} (Default Locale)`);
         window.moment.locales().forEach(locale => {
           const localeName = languages[locale];
@@ -243,12 +159,12 @@ export class BookSearchSettingTab extends PluginSettingTab {
         dropDown
           .setValue(localeValue === DEFAULT_SETTINGS.localePreference ? defaultLocale : localeValue)
           .onChange(async value => {
-            const newValue = value;
-            this.plugin.settings.localePreference = newValue;
+            this.plugin.settings.localePreference = value;
             await this.plugin.saveSettings();
           });
       });
 
+    // Open New Book Note
     new Setting(containerEl)
       .setName('Open New Book Note')
       .setDesc('Enable or disable the automatic opening of the note on creation.')
@@ -258,64 +174,6 @@ export class BookSearchSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         }),
       );
-
-    new Setting(containerEl)
-      .setName('Show Cover Images in Search')
-      .setDesc('Toggle to show or hide cover images in the search results.')
-      .addToggle(toggle =>
-        toggle.setValue(this.plugin.settings.showCoverImageInSearch).onChange(async value => {
-          this.plugin.settings.showCoverImageInSearch = value;
-          await this.plugin.saveSettings();
-        }),
-      );
-
-    // A toggle whether or not to ask for the locale every time a search is made
-    new Setting(containerEl)
-      .setName('Ask for Locale')
-      .setDesc('Toggle to enable or disable asking for the locale every time a search is made.')
-      .addToggle(toggle =>
-        toggle.setValue(this.plugin.settings.askForLocale).onChange(async value => {
-          this.plugin.settings.askForLocale = value;
-          await this.plugin.saveSettings();
-        }),
-      );
-
-    coverImageEdgeCurlToggleSetting = new Setting(containerEl)
-      .setName('Enable Cover Image Edge Curl Effect')
-      .setDesc('Toggle to show or hide page curl effect in cover images.')
-      .addToggle(toggle =>
-        toggle.setValue(this.plugin.settings.enableCoverImageEdgeCurl).onChange(async value => {
-          this.plugin.settings.enableCoverImageEdgeCurl = value;
-          await this.plugin.saveSettings();
-        }),
-      );
-
-    new Setting(containerEl)
-      .setName('Enable Cover Image Save')
-      .setDesc('Toggle to enable or disable saving cover images in notes.')
-      .addToggle(toggle =>
-        toggle.setValue(this.plugin.settings.enableCoverImageSave).onChange(async value => {
-          this.plugin.settings.enableCoverImageSave = value;
-          await this.plugin.saveSettings();
-        }),
-      );
-
-    new Setting(containerEl)
-      .setName('Cover Image Path')
-      .setDesc('Specify the path where cover images should be saved.')
-      .addSearch(cb => {
-        try {
-          new FolderSuggest(this.app, cb.inputEl);
-        } catch {
-          // eslint-disable
-        }
-        cb.setPlaceholder('Enter the path (e.g., Images/Covers)')
-          .setValue(this.plugin.settings.coverImagePath)
-          .onChange(async value => {
-            this.plugin.settings.coverImagePath = value.trim();
-            await this.plugin.saveSettings();
-          });
-      });
 
     // Google API Settings
     this.createHeader('Google API Settings', containerEl);
